@@ -1,3 +1,4 @@
+/* styles.css */
 :root {
     --primary-color: #2e5eff;
     --secondary-color: #e6eaff;
@@ -240,6 +241,11 @@ body {
 
 #sendButton:hover:not(:disabled) {
     background-color: #1e48cc;
+}
+
+#sendButton.active {
+    background-color: var(--primary-color);
+    cursor: pointer;
 }
 
 #sendButton:disabled {
