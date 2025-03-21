@@ -1,3 +1,4 @@
+// app.js
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const settingsButton = document.getElementById('settingsButton');
@@ -11,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chatMessages');
     const userInput = document.getElementById('userInput');
     const sendButton = document.getElementById('sendButton');
+    
+    // Log elements to debug
+    console.log('Send button element:', sendButton);
 
     // Chat history
     let chatHistory = [];
@@ -25,7 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
         maxTokensInput.value = settings.maxTokens;
 
         // Enable send button if API key is set
-        sendButton.disabled = !settings.apiKey.trim();
+        if (settings.apiKey.trim()) {
+            sendButton.disabled = false;
+            sendButton.classList.add('active');
+        } else {
+            sendButton.disabled = true;
+            sendButton.classList.remove('active');
+        }
+        
+        console.log('Settings initialized:', settings);
     }
 
     // Toggle settings panel
@@ -49,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save settings
     saveSettingsButton.addEventListener('click', () => {
+        console.log('Saving settings...');
         deepseekAPI.setApiKey(apiKeyInput.value);
         deepseekAPI.setModel(modelSelect.value);
         deepseekAPI.setTemperature(parseFloat(temperatureInput.value));
@@ -57,10 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsPanel.classList.remove('active');
         
         // Enable send button if API key is set
-        sendButton.disabled = !apiKeyInput.value.trim();
+        if (apiKeyInput.value.trim()) {
+            sendButton.disabled = false;
+            sendButton.classList.add('active');
+        } else {
+            sendButton.disabled = true;
+            sendButton.classList.remove('active');
+        }
         
         // Show confirmation message
         addSystemMessage('Settings saved successfully!');
+        console.log('Settings saved:', deepseekAPI.getSettings());
     });
 
     // Auto-resize textarea
@@ -69,7 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.style.height = (userInput.scrollHeight) + 'px';
         
         // Enable/disable send button based on input
-        sendButton.disabled = !userInput.value.trim() || !deepseekAPI.getSettings().apiKey;
+        if (userInput.value.trim() && deepseekAPI.getSettings().apiKey) {
+            sendButton.disabled = false;
+            sendButton.classList.add('active');
+        } else {
+            sendButton.disabled = true;
+            sendButton.classList.remove('active');
+        }
     });
 
     // Send message on Enter (but allow Shift+Enter for new line)
@@ -77,18 +103,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             if (!sendButton.disabled) {
+                console.log('Enter key pressed, sending message');
                 sendMessage();
             }
         }
     });
 
     // Send message on button click
-    sendButton.addEventListener('click', sendMessage);
+    if (sendButton) {
+        console.log('Adding event listener to send button');
+        sendButton.addEventListener('click', () => {
+            console.log('Send button clicked');
+            sendMessage();
+        });
+    } else {
+        console.error('Send button not found in the DOM');
+    }
 
     // Add message to chat
     function addMessage(content, isUser = false) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = message ${isUser ? 'user-message' : 'ai-message'};
+        messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
         
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
@@ -98,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             content = formatMessage(content);
         }
         
-        messageContent.innerHTML = isUser ? <p>${content}</p> : content;
+        messageContent.innerHTML = isUser ? `<p>${content}</p>` : content;
         messageDiv.appendChild(messageContent);
         
         chatMessages.appendChild(messageDiv);
@@ -114,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
-        messageContent.innerHTML = <p>${content}</p>;
+        messageContent.innerHTML = `<p>${content}</p>`;
         
         messageDiv.appendChild(messageContent);
         chatMessages.appendChild(messageDiv);
@@ -151,13 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Format message (handle code blocks, etc.)
     function formatMessage(content) {
-        // Replace language code  with code blocks
-        content = content.replace(/(\w*)([\s\S]*?)/g, function(match, language, code) {
-            return <div class="code-block" data-language="${language}">${code.trim()}</div>;
+        // Replace ```language code ``` with code blocks
+        content = content.replace(/```(\w*)([\s\S]*?)```/g, function(match, language, code) {
+            return `<div class="code-block" data-language="${language}">${code.trim()}</div>`;
         });
         
         // Replace single line code with inline code
-        content = content.replace(/([^]+)`/g, '<code>$1</code>');
+        content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
         
         // Convert line breaks to <p> tags
         const paragraphs = content.split('\n\n');
@@ -167,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (p.includes('<div class="code-block"')) {
                     return p;
                 }
-                return <p>${p.replace(/\n/g, '<br>')}</p>;
+                return `<p>${p.replace(/\n/g, '<br>')}</p>`;
             }
             return '';
         }).join('');
@@ -175,9 +210,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send message function
     async function sendMessage() {
+        console.log('sendMessage function called');
         const message = userInput.value.trim();
-        if (!message) return;
+        if (!message) {
+            console.log('Message is empty, not sending');
+            return;
+        }
 
+        console.log('Sending message:', message);
+        
         // Add user message to chat
         addMessage(message, true);
         
@@ -191,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.value = '';
         userInput.style.height = 'auto';
         sendButton.disabled = true;
+        sendButton.classList.remove('active');
         
         // Show loading indicator
         addLoadingIndicator();
@@ -215,11 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
             removeLoadingIndicator();
             
             // Show error message
-            addSystemMessage(Error: ${error.message});
+            addSystemMessage(`Error: ${error.message}`);
             console.error('Error:', error);
         }
     }
 
     // Initialize the app
     initializeSettings();
+    
+    // Set focus on input field
+    userInput.focus();
+    
+    console.log('App initialized');
 });
